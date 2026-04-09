@@ -1282,10 +1282,15 @@ let panelIdx   = null;  // currently open task index
 // ═══════════════════════════════════════════════
 //  AUTH & USERS
 // ═══════════════════════════════════════════════
-let USERS = [
+const DEFAULT_USERS = [
   { name:'Dani Lara', email:'dlara@aguasimple.life', password:'Simple123!', role:'admin' }
 ];
+let USERS = JSON.parse(localStorage.getItem('simple_users')) || JSON.parse(JSON.stringify(DEFAULT_USERS));
 let currentUser = null;
+
+function saveUsers() {
+  localStorage.setItem('simple_users', JSON.stringify(USERS));
+}
 
 function initials(name) {
   return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -1329,6 +1334,7 @@ function createUser() {
   if (pass.length < 6)       { errEl.textContent='Contraseña mínimo 6 caracteres.'; errEl.style.display='block'; return; }
   if (USERS.find(u=>u.email.toLowerCase()===email)) { errEl.textContent='Ese email ya existe.'; errEl.style.display='block'; return; }
   USERS.push({ name, email, password:pass, role });
+  saveUsers();
   document.getElementById('nu-name').value='';
   document.getElementById('nu-email').value='';
   document.getElementById('nu-pass').value='';
@@ -1340,6 +1346,7 @@ function deleteUser(email) {
   if (email===currentUser.email) { alert('No puedes eliminar tu propia cuenta.'); return; }
   if (!confirm('¿Eliminar este usuario?')) return;
   USERS = USERS.filter(u=>u.email!==email);
+  saveUsers();
   renderUsers();
 }
 
