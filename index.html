@@ -6,6 +6,7 @@
 <title>simple — GTM tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 /* ── SIMPLE WATER BRAND TOKENS ─────────────────────────────── */
 :root {
@@ -1190,49 +1191,19 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════
-//  BRAND-ALIGNED DATA
+//  SUPABASE CLIENT
 // ═══════════════════════════════════════════════
-// TASKS format: [area, task, due, status, priority, notes, owner_email, stakeholder_emails_csv, detail_notes, subtasks[]]
-const TASKS = [
-  ["Strategy","Define ICP & segmentos de cliente","Abr 28","Not Started","High","B2C vs. B2B","dlara@aguasimple.life",""],
-  ["Strategy","TAM / SAM / SOM sizing","Abr 28","Not Started","High","","dlara@aguasimple.life",""],
-  ["Strategy","Competitive landscape snapshot","May 5","Not Started","Medium","","",""],
-  ["Strategy","Modelo TCO: suscripción vs. alternativas","May 5","Not Started","High","Ahorro 1yr / 3yr","dlara@aguasimple.life",""],
-  ["Strategy","Mapear CAC levers por canal","May 12","Not Started","High","Paid, orgánico, referral","",""],
-  ["Brand","Posicionamiento & purpose statement","May 5","Not Started","High","","",""],
-  ["Brand","Brand messaging framework","May 12","Not Started","High","Value props, tagline","",""],
-  ["Brand","Brand voice & tone guide","May 12","Not Started","High","","",""],
-  ["Brand","Paleta de marca (HEX / Pantone / CMYK)","May 19","Done","High","Palette actualizada abr 2026","dlara@aguasimple.life",""],
-  ["Brand","Brand Manual completo","Jun 2","Not Started","High","Identity + messaging + voice","",""],
-  ["Brand","Sign-off de marca por liderazgo","Jun 2","Not Started","High","Gate milestone","dlara@aguasimple.life",""],
-  ["Product & Pricing","Finalizar SKU & tiers de suscripción","May 5","Not Started","High","Mensual / trimestral / anual","dlara@aguasimple.life",""],
-  ["Product & Pricing","Diseño de packaging","May 19","Not Started","Medium","Alinear a paleta de marca","",""],
-  ["Product & Pricing","Unit economics & modelo de precios","May 12","Done","High","COGS, márgenes, ARPU","dlara@aguasimple.life",""],
-  ["Product & Pricing","Precios aprobados por liderazgo","May 12","Done","High","Gate milestone","dlara@aguasimple.life",""],
-  ["Suscripción","Seleccionar plataforma de billing","May 5","Not Started","High","Stripe / Recharge / Chargebee","",""],
-  ["Suscripción","Flujo de checkout de suscripción","May 26","Not Started","High","Trial → paid","",""],
-  ["Suscripción","Mecánica de free trial","May 19","Not Started","High","14 o 30 días?","",""],
-  ["Suscripción","Flujo de onboarding email (Día 1–30)","May 26","Not Started","High","Welcome, setup, reminder","",""],
-  ["Suscripción","Flujo de cancelación & win-back","Jun 2","Not Started","Medium","Exit survey + save offer","",""],
-  ["Suscripción","Recordatorio de reemplazo de filtro","Jun 2","Not Started","High","Email + SMS","",""],
-  ["Website","Homepage copy & variantes A/B","May 19","Not Started","High","Hero, beneficios, CTA","",""],
-  ["Website","UX wireframes (homepage + checkout)","May 26","Not Started","High","Mobile-first","",""],
-  ["Website","Diseño visual hi-fi","Jun 2","Not Started","High","Alineado a brand manual","",""],
-  ["Website","Desarrollo front-end","Jun 16","Not Started","High","CMS o build custom","",""],
-  ["Website","Setup analytics (GA4 + pixels + heatmap)","Jun 9","Not Started","High","","",""],
-  ["Website","Setup A/B testing","Jun 16","Not Started","Medium","VWO / Optimizely / GA4 Exp.","",""],
-  ["Website","QA & testing de dispositivos","Jun 23","Not Started","High","Desktop + mobile","",""],
-  ["Website","Homepage go-live","Jun 23","Not Started","High","","dlara@aguasimple.life",""],
-  ["Marketing","Calendario de marketing 12 semanas","May 19","Not Started","High","Paid, email, contenido, social","",""],
-  ["Marketing","Creativos para paid social","Jun 9","Not Started","High","","",""],
-  ["Marketing","Setup paid search (Google)","Jun 16","Not Started","Medium","","",""],
-  ["Marketing","Secuencia de email de lanzamiento","Jun 16","Not Started","High","","",""],
-  ["Lanzamiento","Sign-off checklist de lanzamiento","Jun 23","Not Started","High","Gate milestone","dlara@aguasimple.life",""],
-  ["Lanzamiento","Soft launch / piloto","Jun 23","Not Started","High","","",""],
-  ["Lanzamiento","Launch A/B test — homepage","Jun 23","Not Started","High","Mín 2 sem / 95% sig.","",""],
-  ["Lanzamiento","Lanzamiento completo","Jul 7","Not Started","High","","dlara@aguasimple.life",""],
-  ["Lanzamiento","Revisión KPI semana 2 post-launch","Jul 7","Not Started","High","","dlara@aguasimple.life",""],
-];
+const SUPABASE_URL = 'https://keksunzrhizgdhryymcv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtla3N1bnpyaGl6Z2Rocnl5bWN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjgzMTcsImV4cCI6MjA5MTM0NDMxN30.bPYjlz2gPtSmRbypSb71L_RBBQz4gzGp2hWPNj3nJqY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════
+//  IN-MEMORY STATE (loaded from Supabase)
+// ═══════════════════════════════════════════════
+// TASKS[i] = [area, name, due, status, priority, notes, owner_email, stakeholders, detail_notes, subtasks[]]
+let TASKS = [];
+let TASK_IDS = [];  // parallel array of DB ids
+let statuses = [];
 
 const MILESTONES = [
   ["ICP & TAM análisis",        "Research",  "Abr 28","Not Started"],
@@ -1270,46 +1241,72 @@ const KPI_DATA = [
   ["Satisfacción","On-time shipment rate",              0.95,  "%",   "high"],
 ];
 
-const actuals = new Array(KPI_DATA.length).fill(null);
-let statuses   = TASKS.map(t => t[3]);
-// Ensure all tasks have notes (idx 8) and subtasks (idx 9)
-TASKS.forEach(t => { if (t[8]===undefined) t[8]=''; if (t[9]===undefined) t[9]=[]; });
+let actuals = new Array(KPI_DATA.length).fill(null);
 let curFilter  = 'all';
 let curSearch  = '';
 let chartInst  = null;
-let panelIdx   = null;  // currently open task index
+let panelIdx   = null;
+
+let USERS = [];
+let currentUser = null;
+
+// ═══════════════════════════════════════════════
+//  LOAD DATA FROM SUPABASE
+// ═══════════════════════════════════════════════
+async function loadUsers() {
+  const { data } = await sb.from('users').select('*').order('created_at');
+  USERS = (data || []).map(u => ({ name: u.name, email: u.email, password: u.password, role: u.role }));
+}
+
+async function loadTasks() {
+  const { data } = await sb.from('tasks').select('*').order('sort_order');
+  TASKS = [];
+  TASK_IDS = [];
+  statuses = [];
+  for (const t of (data || [])) {
+    // Load subtasks for this task
+    const { data: subs } = await sb.from('subtasks').select('*').eq('task_id', t.id).order('sort_order');
+    const subtasks = (subs || []).map(s => ({ id: s.id, name: s.name, owner: s.owner || '', due: s.due || '', done: s.done }));
+    TASKS.push([t.area, t.name, t.due || '', t.status, t.priority, t.notes || '', t.owner_email || '', t.stakeholders || '', t.detail_notes || '', subtasks]);
+    TASK_IDS.push(t.id);
+    statuses.push(t.status);
+  }
+}
+
+async function loadKPIActuals() {
+  const { data } = await sb.from('kpi_actuals').select('*');
+  actuals = new Array(KPI_DATA.length).fill(null);
+  for (const row of (data || [])) {
+    if (row.kpi_index >= 0 && row.kpi_index < actuals.length) {
+      actuals[row.kpi_index] = row.actual;
+    }
+  }
+}
 
 // ═══════════════════════════════════════════════
 //  AUTH & USERS
 // ═══════════════════════════════════════════════
-const DEFAULT_USERS = [
-  { name:'Dani Lara', email:'dlara@aguasimple.life', password:'Simple123!', role:'admin' }
-];
-let USERS = JSON.parse(localStorage.getItem('simple_users')) || JSON.parse(JSON.stringify(DEFAULT_USERS));
-let currentUser = null;
-
-function saveUsers() {
-  localStorage.setItem('simple_users', JSON.stringify(USERS));
-}
-
 function initials(name) {
   return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('l-email').value.trim().toLowerCase();
   const pass  = document.getElementById('l-pass').value;
-  const user  = USERS.find(u => u.email.toLowerCase()===email && u.password===pass);
-  if (!user) {
+  // Fetch user from Supabase
+  const { data } = await sb.from('users').select('*').eq('email', email).eq('password', pass).single();
+  if (!data) {
     document.getElementById('l-error').classList.add('show');
     return;
   }
-  currentUser = user;
+  currentUser = { name: data.name, email: data.email, password: data.password, role: data.role };
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('sb-avatar').textContent = initials(user.name);
-  document.getElementById('sb-name').textContent   = user.name;
-  document.getElementById('sb-role').textContent   = user.role==='admin' ? 'Admin' : 'Member';
-  if (user.role==='admin') document.getElementById('admin-nav').style.display='block';
+  document.getElementById('sb-avatar').textContent = initials(currentUser.name);
+  document.getElementById('sb-name').textContent   = currentUser.name;
+  document.getElementById('sb-role').textContent   = currentUser.role==='admin' ? 'Admin' : 'Member';
+  if (currentUser.role==='admin') document.getElementById('admin-nav').style.display='block';
+  // Load all data
+  await Promise.all([loadUsers(), loadTasks(), loadKPIActuals()]);
   updateSidebar();
   renderDashboard();
 }
@@ -1323,7 +1320,7 @@ function doLogout() {
   document.getElementById('admin-nav').style.display = 'none';
 }
 
-function createUser() {
+async function createUser() {
   const name  = document.getElementById('nu-name').value.trim();
   const email = document.getElementById('nu-email').value.trim().toLowerCase();
   const pass  = document.getElementById('nu-pass').value;
@@ -1333,8 +1330,9 @@ function createUser() {
   if (!name||!email||!pass) { errEl.textContent='Completa todos los campos.'; errEl.style.display='block'; return; }
   if (pass.length < 6)       { errEl.textContent='Contraseña mínimo 6 caracteres.'; errEl.style.display='block'; return; }
   if (USERS.find(u=>u.email.toLowerCase()===email)) { errEl.textContent='Ese email ya existe.'; errEl.style.display='block'; return; }
-  USERS.push({ name, email, password:pass, role });
-  saveUsers();
+  const { error } = await sb.from('users').insert({ name, email, password: pass, role });
+  if (error) { errEl.textContent='Error al crear usuario.'; errEl.style.display='block'; return; }
+  await loadUsers();
   document.getElementById('nu-name').value='';
   document.getElementById('nu-email').value='';
   document.getElementById('nu-pass').value='';
@@ -1342,11 +1340,11 @@ function createUser() {
   renderUsers();
 }
 
-function deleteUser(email) {
+async function deleteUser(email) {
   if (email===currentUser.email) { alert('No puedes eliminar tu propia cuenta.'); return; }
   if (!confirm('¿Eliminar este usuario?')) return;
-  USERS = USERS.filter(u=>u.email!==email);
-  saveUsers();
+  await sb.from('users').delete().eq('email', email);
+  await loadUsers();
   renderUsers();
 }
 
@@ -1381,46 +1379,21 @@ function ownerChip(email) {
   return `<span class="owner-chip"><span class="owner-chip-avatar">${ini}</span>${label}</span>`;
 }
 
-function stakeholderChips(csv) {
-  if (!csv) return '';
-  return csv.split(',').map(e=>e.trim()).filter(Boolean).map(email=>{
-    const u = getUserByEmail(email);
-    const label = u ? u.name.split(' ')[0] : email.split('@')[0];
-    return `<span class="stake-chip">${label}</span>`;
-  }).join('');
-}
-
 function userOptions(selectedEmail) {
   return `<option value="">— Sin asignar</option>` +
     USERS.map(u=>`<option value="${u.email}" ${u.email===selectedEmail?'selected':''}>${u.name}</option>`).join('');
 }
 
 // ═══════════════════════════════════════════════
-//  DATE HELPERS  (ISO ↔ display "28 Abr 2026")
+//  DATE HELPERS
 // ═══════════════════════════════════════════════
-const MES = {Ene:1,Feb:2,Mar:3,Abr:4,May:5,Jun:6,Jul:7,Ago:8,Sep:9,Oct:10,Nov:11,Dic:12};
 const MES_INV = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
 
-function dateToISO(str) {
-  // "Abr 28" or "May 5" → "2026-04-28"
-  if (!str || str==='TBD') return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str; // already ISO
-  const parts = str.trim().split(/\s+/);
-  if (parts.length < 2) return '';
-  const m = MES[parts[0]]; const d = parseInt(parts[1]);
-  if (!m || isNaN(d)) return '';
-  return `2026-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-}
-
 function dateFromISO(iso) {
-  // "2026-04-28" → "28 Abr"
   if (!iso) return 'TBD';
   const [,mm,dd] = iso.split('-');
   return `${parseInt(dd)} ${MES_INV[parseInt(mm)]}`;
 }
-
-// Migrate existing "Abr 28" style dates to ISO on load
-TASKS.forEach(t => { t[2] = dateToISO(t[2]) || t[2]; });
 
 // ═══════════════════════════════════════════════
 //  TASK DETAIL PANEL
@@ -1429,10 +1402,9 @@ function openPanel(i) {
   panelIdx = i;
   const t = TASKS[i];
   document.getElementById('p-name').value    = t[1];
-  // area dropdown
   const areaEl = document.getElementById('p-area');
   areaEl.value = t[0];
-  if (!areaEl.value) { // add custom option if not in list
+  if (!areaEl.value) {
     const opt = document.createElement('option');
     opt.value = t[0]; opt.textContent = t[0]; areaEl.appendChild(opt);
     areaEl.value = t[0];
@@ -1457,7 +1429,7 @@ function renderPanelStakeholders(csv) {
       <input type="checkbox" ${checked?'checked':''} value="${u.email}" style="accent-color:var(--sage);width:12px;height:12px" onchange="refreshPanelStakeStyles()"/>
       ${u.name.split(' ')[0]}
     </label>`;
-  }).join('') + (USERS.length===0 ? `<span style="font-size:11px;color:var(--warm-gray)">Sin usuarios — agrega en la sección Usuarios</span>` : '');
+  }).join('') + (USERS.length===0 ? `<span style="font-size:11px;color:var(--warm-gray)">Sin usuarios</span>` : '');
 }
 
 function refreshPanelStakeStyles() {
@@ -1480,9 +1452,10 @@ function closePanel() {
   panelIdx = null;
 }
 
-function savePanel() {
+async function savePanel() {
   if (panelIdx === null) return;
   const t = TASKS[panelIdx];
+  const dbId = TASK_IDS[panelIdx];
   t[0] = document.getElementById('p-area').value.trim() || t[0];
   t[1] = document.getElementById('p-name').value.trim() || t[1];
   t[2] = document.getElementById('p-due').value || t[2];
@@ -1492,7 +1465,23 @@ function savePanel() {
   t[6] = document.getElementById('p-owner').value;
   t[7] = getPanelStakeholders();
   t[8] = document.getElementById('p-notes').value;
-  // subtasks saved in-place via renderSubtasks
+
+  // Save task to Supabase
+  await sb.from('tasks').update({
+    area: t[0], name: t[1], due: t[2] || null, status: t[3],
+    priority: t[4], notes: t[5], owner_email: t[6],
+    stakeholders: t[7], detail_notes: t[8]
+  }).eq('id', dbId);
+
+  // Save subtasks: delete old, insert new
+  const subs = t[9] || [];
+  await sb.from('subtasks').delete().eq('task_id', dbId);
+  if (subs.length > 0) {
+    await sb.from('subtasks').insert(subs.map((s, si) => ({
+      task_id: dbId, name: s.name, owner: s.owner, due: s.due, done: s.done, sort_order: si
+    })));
+  }
+
   closePanel();
   updateSidebar();
   if (document.getElementById('view-tasks').classList.contains('active')) renderTasks();
@@ -1515,8 +1504,7 @@ function renderSubtasks() {
           ${USERS.map(u=>`<option value="${u.email}" ${s.owner===u.email?'selected':''}>${u.name.split(' ')[0]}</option>`).join('')}
         </select>
         <input type="text" class="subtask-due-inp" value="${s.due||''}" placeholder="fecha"
-          style="width:58px"
-          onchange="updateSub(${si},'due',this.value)"/>
+          style="width:58px" onchange="updateSub(${si},'due',this.value)"/>
         <button class="subtask-del" onclick="deleteSub(${si})">
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
             <line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/>
@@ -1531,7 +1519,6 @@ function addSubtask() {
   if (!TASKS[panelIdx][9]) TASKS[panelIdx][9] = [];
   TASKS[panelIdx][9].push({ name:'', owner:'', due:'', done:false });
   renderSubtasks();
-  // focus last input
   const inputs = document.querySelectorAll('.subtask-name');
   if (inputs.length) inputs[inputs.length-1].focus();
 }
@@ -1607,7 +1594,6 @@ function updateSidebar() {
   document.getElementById('sidebar-fill').style.width = c.pct+'%';
   document.getElementById('sidebar-pct').textContent = c.pct+'%';
   document.getElementById('badge-tasks').textContent = c.total - c.done;
-
   document.getElementById('sidebar-counts').innerHTML = [
     ['Done',        c.done, 'var(--sage)',  '#5C7A3A'],
     ['En Progreso', c.prog, 'var(--blue)',  '#7A97AB'],
@@ -1652,7 +1638,6 @@ function renderDashboard() {
   document.getElementById('d-inprog').textContent = c.prog;
   document.getElementById('d-prog-bar').style.width = c.pct+'%';
 
-  // Milestones
   document.getElementById('milestone-list').innerHTML = MILESTONES.map(([n,a,d,s])=>`
     <div class="milestone-row">
       <div><div class="ms-name">${n}</div><div class="ms-area">${a}</div></div>
@@ -1660,40 +1645,24 @@ function renderDashboard() {
       ${badge(s)}
     </div>`).join('');
 
-  // Chart
   if (chartInst) chartInst.destroy();
   const ctx = document.getElementById('taskChart').getContext('2d');
   chartInst = new Chart(ctx,{
     type:'doughnut',
     data:{
       labels:['Completadas','En Progreso','Pendientes','En Pausa'],
-      datasets:[{
-        data:[c.done,c.prog,c.todo,c.hold],
-        backgroundColor:['#A3A983','#7A97AB','#EBEBEB','#DCC7B7'],
-        borderWidth:0,
-        hoverOffset:4
-      }]
+      datasets:[{ data:[c.done,c.prog,c.todo,c.hold], backgroundColor:['#A3A983','#7A97AB','#EBEBEB','#DCC7B7'], borderWidth:0, hoverOffset:4 }]
     },
     options:{
       cutout:'72%',
       plugins:{
-        legend:{
-          position:'bottom',
-          labels:{
-            font:{family:'Montserrat',size:10},
-            color:'#7A7A7A',
-            padding:14,
-            usePointStyle:true,
-            pointStyleWidth:8
-          }
-        },
+        legend:{ position:'bottom', labels:{ font:{family:'Montserrat',size:10}, color:'#7A7A7A', padding:14, usePointStyle:true, pointStyleWidth:8 }},
         tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}
       },
       animation:{duration:500}
     }
   });
 
-  // KPI snap
   const snap = [2,7,9,12,14];
   document.getElementById('kpi-snap').innerHTML = snap.map(i=>{
     const [,name,target,unit,dir] = KPI_DATA[i];
@@ -1726,60 +1695,37 @@ function renderTasks() {
   const areas = [...new Set(TASKS.map(t=>t[0]))];
   let html = `<table class="task-table">
     <thead><tr>
-      <th style="width:32%">Tarea</th>
-      <th style="width:8%">Área</th>
-      <th style="width:9%">Fecha</th>
-      <th style="width:13%">Estado</th>
-      <th style="width:8%">Prioridad</th>
-      <th style="width:12%">Owner</th>
-      <th style="width:14%">Stakeholders</th>
-      <th style="width:32px"></th>
+      <th style="width:32%">Tarea</th><th style="width:8%">Área</th><th style="width:9%">Fecha</th>
+      <th style="width:13%">Estado</th><th style="width:8%">Prioridad</th><th style="width:12%">Owner</th>
+      <th style="width:14%">Stakeholders</th><th style="width:32px"></th>
     </tr></thead><tbody>`;
 
   areas.forEach(area=>{
     const idxs = TASKS.map((_,i)=>TASKS[i][0]===area?i:-1).filter(i=>i>=0);
     const vis = idxs.filter(i=>taskVisible(i));
     if (!vis.length) return;
-
-    html += `<tr><td colspan="6" style="padding:0;border:none">
-      <div class="area-header">
-        <span class="area-label">${area}</span>
-        <div class="area-line"></div>
-        <span class="area-count">${vis.length}</span>
-      </div>
+    html += `<tr><td colspan="8" style="padding:0;border:none">
+      <div class="area-header"><span class="area-label">${area}</span><div class="area-line"></div><span class="area-count">${vis.length}</span></div>
     </td></tr>`;
-
     vis.forEach(i=>{
       const [area,task,due,,priority,notes,ownerEmail,stakeCSV] = TASKS[i];
       const s = statuses[i];
       const done = s.includes("Done");
       const isAdmin = currentUser?.role === 'admin';
       html+=`<tr class="${done?'is-done':''}" data-i="${i}">
-        <td>
-          <div class="task-name" style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="openPanel(${i})">
-            ${task}
-            <svg style="flex-shrink:0;opacity:0" class="task-edit-icon" width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 2l3 3-7 7H2v-3z"/>
-            </svg>
-          </div>
-          ${notes ? `<div class="task-note">${notes}</div>` : ''}
-        </td>
+        <td><div class="task-name" style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="openPanel(${i})">${task}
+          <svg style="flex-shrink:0;opacity:0" class="task-edit-icon" width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
+        </div>${notes ? `<div class="task-note">${notes}</div>` : ''}</td>
         <td><span class="task-area-tag">${area}</span></td>
         <td style="font-size:11.5px;color:var(--text-soft)">${dateFromISO(due)||due}</td>
-        <td>
-          <select class="status-sel" onchange="setStatus(${i},this.value)">
-            ${['Done','In Progress','Not Started','On Hold'].map(o=>`<option ${o===s?'selected':''}>${o}</option>`).join('')}
-          </select>
-        </td>
+        <td><select class="status-sel" onchange="setStatus(${i},this.value)">
+          ${['Done','In Progress','Not Started','On Hold'].map(o=>`<option ${o===s?'selected':''}>${o}</option>`).join('')}
+        </select></td>
         <td>${pbadge(priority)}</td>
-        <td>
-          ${isAdmin
-            ? `<select class="status-sel" style="max-width:130px" onchange="setOwner(${i},this.value)">${userOptions(ownerEmail)}</select>`
-            : ownerChip(ownerEmail)}
-        </td>
+        <td>${isAdmin ? `<select class="status-sel" style="max-width:130px" onchange="setOwner(${i},this.value)">${userOptions(ownerEmail)}</select>` : ownerChip(ownerEmail)}</td>
         <td>${stakeDropdown(i, stakeCSV)}</td>
         <td style="width:32px;text-align:center">
-          <button onclick="deleteTask(${i})" title="Borrar tarea" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:4px;color:var(--warm-gray);display:flex;align-items:center;justify-content:center;transition:color .15s" onmouseover="this.style.color='#9B2335'" onmouseout="this.style.color='var(--warm-gray)'">
+          <button onclick="deleteTask(${i})" title="Borrar tarea" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:4px;color:var(--warm-gray);display:flex;align-items:center;justify-content:center" onmouseover="this.style.color='#9B2335'" onmouseout="this.style.color='var(--warm-gray)'">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
               <polyline points="1,3.5 13,3.5"/><path d="M5.5,3.5V2.5a1,1,0,0,1,1-1h1a1,1,0,0,1,1,1v1"/><path d="M2.5,3.5l.8,8.2a1,1,0,0,0,1,.8h5.4a1,1,0,0,0,1-.8l.8-8.2"/>
             </svg>
@@ -1788,44 +1734,36 @@ function renderTasks() {
       </tr>`;
     });
   });
-
   html+='</tbody></table>';
   document.getElementById('task-list').innerHTML=html;
 }
 
-function setStatus(i,v) {
+async function setStatus(i,v) {
   statuses[i]=v;
+  TASKS[i][3]=v;
+  await sb.from('tasks').update({ status: v }).eq('id', TASK_IDS[i]);
   updateSidebar();
   if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
 }
-const AREAS = ['Strategy','Brand','Product & Pricing','Suscripción','Website','Marketing','Lanzamiento','Technology','Data','Otro'];
 
-function setOwner(i, email) {
+async function setOwner(i, email) {
   TASKS[i][6] = email;
-}
-function setStakeholders(i, csv) {
-  TASKS[i][7] = csv;
+  await sb.from('tasks').update({ owner_email: email }).eq('id', TASK_IDS[i]);
 }
 
-// ── Stakeholder multi-select dropdown ──
 function stakeDropdown(i, csv) {
   const selected = (csv||'').split(',').map(e=>e.trim()).filter(Boolean);
-  const label = selected.length === 0
-    ? '+ Agregar'
+  const label = selected.length === 0 ? '+ Agregar'
     : selected.map(e=>{ const u=getUserByEmail(e); return u?u.name.split(' ')[0]:e.split('@')[0]; }).join(', ');
   return `<div class="stake-dropdown" id="sd-${i}">
     <button class="stake-btn" onclick="toggleStakeMenu(${i},event)">${label}
       <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="2,3.5 5,6.5 8,3.5"/></svg>
     </button>
     <div class="stake-menu" id="smenu-${i}">
-      ${USERS.length === 0
-        ? `<div style="padding:10px 14px;font-size:11px;color:var(--warm-gray)">Sin usuarios registrados</div>`
-        : USERS.map(u=>`
-        <label class="stake-menu-item">
-          <input type="checkbox" ${selected.includes(u.email)?'checked':''}
-            onchange="toggleStake(${i},'${u.email}',this.checked)"/>
-          <span class="stake-menu-avatar">${initials(u.name)}</span>
-          ${u.name}
+      ${USERS.length === 0 ? `<div style="padding:10px 14px;font-size:11px;color:var(--warm-gray)">Sin usuarios</div>`
+        : USERS.map(u=>`<label class="stake-menu-item">
+          <input type="checkbox" ${selected.includes(u.email)?'checked':''} onchange="toggleStake(${i},'${u.email}',this.checked)"/>
+          <span class="stake-menu-avatar">${initials(u.name)}</span>${u.name}
         </label>`).join('')}
     </div>
   </div>`;
@@ -1833,42 +1771,37 @@ function stakeDropdown(i, csv) {
 
 function toggleStakeMenu(i, e) {
   e.stopPropagation();
-  // close all other open menus
   document.querySelectorAll('.stake-menu.open').forEach(m=>{ if (m.id!=='smenu-'+i) m.classList.remove('open'); });
   document.getElementById('smenu-'+i)?.classList.toggle('open');
 }
 
-function toggleStake(i, email, checked) {
+async function toggleStake(i, email, checked) {
   let arr = (TASKS[i][7]||'').split(',').map(e=>e.trim()).filter(Boolean);
   if (checked && !arr.includes(email)) arr.push(email);
   if (!checked) arr = arr.filter(e=>e!==email);
   TASKS[i][7] = arr.join(',');
-  // refresh label on button
+  await sb.from('tasks').update({ stakeholders: TASKS[i][7] }).eq('id', TASK_IDS[i]);
   const label = arr.length === 0 ? '+ Agregar'
     : arr.map(e=>{ const u=getUserByEmail(e); return u?u.name.split(' ')[0]:e.split('@')[0]; }).join(', ');
   const btn = document.querySelector(`#sd-${i} .stake-btn`);
   if (btn) btn.childNodes[0].textContent = label;
 }
 
-// close menus on outside click
 document.addEventListener('click', ()=>{
   document.querySelectorAll('.stake-menu.open').forEach(m=>m.classList.remove('open'));
 });
-function deleteTask(i) {
+
+async function deleteTask(i) {
   if (!confirm(`¿Borrar "${TASKS[i][1]}"?`)) return;
+  await sb.from('tasks').delete().eq('id', TASK_IDS[i]);
   TASKS.splice(i,1);
+  TASK_IDS.splice(i,1);
   statuses.splice(i,1);
   updateSidebar();
   renderTasks();
   if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
 }
-function deleteKPI(i) {
-  if (!confirm(`¿Borrar "${KPI_DATA[i][1]}"?`)) return;
-  KPI_DATA.splice(i,1);
-  actuals.splice(i,1);
-  renderKPIs();
-  if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
-}
+
 function filter(f,el) {
   curFilter=f;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
@@ -1884,20 +1817,12 @@ function renderKPIs() {
   const secs = [...new Set(KPI_DATA.map(k=>k[0]))];
   let html = `<table class="kpi-table">
     <thead><tr>
-      <th style="width:33%">métrica</th>
-      <th style="width:10%">target</th>
-      <th style="width:13%">real</th>
-      <th style="width:12%">Δ vs target</th>
-      <th style="width:9%">Δ %</th>
-      <th>estado</th>
-      <th style="width:32px"></th>
+      <th style="width:33%">métrica</th><th style="width:10%">target</th><th style="width:13%">real</th>
+      <th style="width:12%">Δ vs target</th><th style="width:9%">Δ %</th><th>estado</th>
     </tr></thead><tbody>`;
 
   secs.forEach(sec=>{
-    html+=`<tr><td colspan="6" style="padding:0;border:none">
-      <div class="kpi-section-label">${sec}</div>
-    </td></tr>`;
-
+    html+=`<tr><td colspan="6" style="padding:0;border:none"><div class="kpi-section-label">${sec}</div></td></tr>`;
     KPI_DATA.forEach(([s,name,target,unit,dir],i)=>{
       if (s!==sec) return;
       const a = actuals[i];
@@ -1905,7 +1830,6 @@ function renderKPIs() {
       const av = a!==null&&a!=='' ? parseFloat(a) : null;
       const dv = av!==null ? av-target : null;
       const dp = av!==null&&target ? dv/target*100 : null;
-
       const fmtDelta = ()=>{
         if (dv===null) return '<span class="delta-neu">—</span>';
         const pos = dir==="high"?dv>=0:dv<=0;
@@ -1921,37 +1845,24 @@ function renderKPIs() {
         const cls = pos?'delta-pos':'delta-neg';
         return `<span class="${cls}">${dp>=0?'+':''}${dp.toFixed(0)}%</span>`;
       };
-
       html+=`<tr>
         <td><span class="kpi-metric-name">${name}</span></td>
         <td><span class="kpi-target">${fmtT(target,unit)}</span></td>
-        <td>
-          <input class="actual-input" type="number" placeholder="Ingresar"
-            value="${a!==null?a:''}"
-            step="${unit==='%'?'0.01':'1'}"
-            onchange="setActual(${i},this.value)"
-            oninput="setActual(${i},this.value)"/>
-        </td>
-        <td>${fmtDelta()}</td>
-        <td>${fmtPct()}</td>
-        <td>${ragBadge(r)}</td>
-        <td style="width:32px;text-align:center">
-          <button onclick="deleteKPI(${i})" title="Borrar KPI" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:4px;color:var(--warm-gray);display:flex;align-items:center;justify-content:center;transition:color .15s" onmouseover="this.style.color='#9B2335'" onmouseout="this.style.color='var(--warm-gray)'">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-              <polyline points="1,3.5 13,3.5"/><path d="M5.5,3.5V2.5a1,1,0,0,1,1-1h1a1,1,0,0,1,1,1v1"/><path d="M2.5,3.5l.8,8.2a1,1,0,0,0,1,.8h5.4a1,1,0,0,0,1-.8l.8-8.2"/>
-            </svg>
-          </button>
-        </td>
+        <td><input class="actual-input" type="number" placeholder="Ingresar"
+          value="${a!==null?a:''}" step="${unit==='%'?'0.01':'1'}"
+          onchange="setActual(${i},this.value)"/></td>
+        <td>${fmtDelta()}</td><td>${fmtPct()}</td><td>${ragBadge(r)}</td>
       </tr>`;
     });
   });
-
   html+='</tbody></table>';
   document.getElementById('kpi-table-wrap').innerHTML=html;
 }
 
-function setActual(i,v) {
+async function setActual(i,v) {
   actuals[i]=v===''?null:v;
+  const actual = v==='' ? null : parseFloat(v);
+  await sb.from('kpi_actuals').upsert({ kpi_index: i, actual, updated_at: new Date().toISOString() }, { onConflict: 'kpi_index' });
   renderKPIs();
   if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
 }
@@ -1959,23 +1870,29 @@ function setActual(i,v) {
 // ═══════════════════════════════════════════════
 //  ADD TASK
 // ═══════════════════════════════════════════════
-function addTask() {
+async function addTask() {
   const task = prompt("Nombre de la tarea:");
   if (!task) return;
   const owner = currentUser ? currentUser.email : "";
-  TASKS.push(["Strategy", task, "TBD", "Not Started", "Medium", "", owner, "", "", []]);
-  statuses.push("Not Started");
+  const maxOrder = TASKS.length > 0 ? TASKS.length + 1 : 1;
+  const { data, error } = await sb.from('tasks').insert({
+    area: 'Strategy', name: task, status: 'Not Started', priority: 'Medium',
+    notes: '', owner_email: owner, stakeholders: '', detail_notes: '', sort_order: maxOrder
+  }).select().single();
+  if (error || !data) { alert('Error al crear tarea'); return; }
+  TASKS.push(['Strategy', task, '', 'Not Started', 'Medium', '', owner, '', '', []]);
+  TASK_IDS.push(data.id);
+  statuses.push('Not Started');
   const newIdx = TASKS.length - 1;
   updateSidebar();
   if (document.getElementById('view-tasks').classList.contains('active')) renderTasks();
-  // open panel so user can set area, date, etc.
   setTimeout(()=>openPanel(newIdx), 50);
 }
 
 // ═══════════════════════════════════════════════
-//  INIT — app starts at login screen
+//  INIT
 // ═══════════════════════════════════════════════
-// (dashboard renders after successful login)
+// App starts at login screen — data loads after login
 </script>
 </body>
 </html>
