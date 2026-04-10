@@ -1181,9 +1181,12 @@ body {
 
     <!-- ═══ KPIs ═══ -->
     <div class="view" id="view-kpis">
-      <div class="page-header">
-        <div class="page-title">KPI Scorecard</div>
-        <div class="page-sub">métricas de suscripción · ingresa el real en los campos azules · RAG automático</div>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="page-title">KPI Scorecard</div>
+          <div class="page-sub">métricas de suscripción · ingresa el real en los campos azules · RAG automático</div>
+        </div>
+        <button class="btn btn-primary" onclick="addKPI()">+ Agregar KPI</button>
       </div>
       <div class="card" style="overflow:visible">
         <div class="card-body" style="padding:0 20px 16px" id="kpi-table-wrap"></div>
@@ -1220,32 +1223,8 @@ const MILESTONES = [
   ["Lanzamiento completo",      "Launch",    "Jul 7", "Not Started"],
 ];
 
-const KPI_DATA = [
-  ["Crecimiento","Suscriptores activos — Sem 4",        100,   "#",   "high"],
-  ["Crecimiento","Suscriptores activos — Sem 8",        250,   "#",   "high"],
-  ["Crecimiento","Suscriptores activos — Sem 12",       500,   "#",   "high"],
-  ["Crecimiento","Conv. Trial → Pago",                 0.40,   "%",   "high"],
-  ["Crecimiento","Inicios de trial — Mes lanzamiento",  300,   "#",   "high"],
-  ["Revenue","MRR — Sem 4 ($)",                        2500,   "$",   "high"],
-  ["Revenue","MRR — Sem 8 ($)",                        6250,   "$",   "high"],
-  ["Revenue","MRR — Mes lanzamiento ($)",             12500,   "$",   "high"],
-  ["Revenue","ARPU / Mes ($)",                           25,   "$",   "high"],
-  ["Retención","Churn mensual",                         0.05,  "%",   "low"],
-  ["Retención","Retención mensual",                     0.95,  "%",   "high"],
-  ["Retención","Net Revenue Retention",                 1.00,  "%",   "high"],
-  ["Unit Econ.","Customer Acquisition Cost ($)",          25,  "$",   "low"],
-  ["Unit Econ.","Lifetime Value — LTV ($)",              450,  "$",   "high"],
-  ["Unit Econ.","LTV : CAC Ratio",                        18,  "x",   "high"],
-  ["Unit Econ.","Payback Period (meses)",                  3,  "#",   "low"],
-  ["Marketing","Sessions web — Mes lanzamiento",        3000,  "#",   "high"],
-  ["Marketing","Costo por trial start ($)",               10,  "$",   "low"],
-  ["Marketing","Paid ad CTR",                          0.025,  "%",   "high"],
-  ["Satisfacción","NPS Score",                            45,  "#",   "high"],
-  ["Satisfacción","Rating promedio (1–5 ★)",             4.3,  "#",   "high"],
-  ["Satisfacción","On-time shipment rate",              0.95,  "%",   "high"],
-];
-
-let actuals = new Array(KPI_DATA.length).fill(null);
+// KPIs loaded from Supabase: [{id, category, name, target, unit, direction, actual}]
+let KPI_LIST = [];
 let curFilter  = 'all';
 let curSearch  = '';
 let chartInst  = null;
@@ -1277,14 +1256,13 @@ async function loadTasks() {
   }
 }
 
-async function loadKPIActuals() {
-  const { data } = await sb.from('kpi_actuals').select('*');
-  actuals = new Array(KPI_DATA.length).fill(null);
-  for (const row of (data || [])) {
-    if (row.kpi_index >= 0 && row.kpi_index < actuals.length) {
-      actuals[row.kpi_index] = row.actual;
-    }
-  }
+async function loadKPIs() {
+  const { data } = await sb.from('kpis').select('*').order('sort_order');
+  KPI_LIST = (data || []).map(k => ({
+    id: k.id, category: k.category, name: k.name,
+    target: Number(k.target), unit: k.unit, direction: k.direction,
+    actual: k.actual !== null ? Number(k.actual) : null
+  }));
 }
 
 // ═══════════════════════════════════════════════
@@ -1302,7 +1280,7 @@ async function enterApp(user) {
   document.getElementById('sb-name').textContent   = user.name;
   document.getElementById('sb-role').textContent   = user.role==='admin' ? 'Admin' : 'Member';
   if (user.role==='admin') document.getElementById('admin-nav').style.display='block';
-  await Promise.all([loadUsers(), loadTasks(), loadKPIActuals()]);
+  await Promise.all([loadUsers(), loadTasks(), loadKPIs()]);
   updateSidebar();
   renderDashboard();
 }
@@ -1685,14 +1663,14 @@ function renderDashboard() {
     }
   });
 
-  const snap = [2,7,9,12,14];
-  document.getElementById('kpi-snap').innerHTML = snap.map(i=>{
-    const [,name,target,unit,dir] = KPI_DATA[i];
-    const r = rag(actuals[i], target, dir);
+  // Show first 5 KPIs as snapshot
+  const snapKPIs = KPI_LIST.slice(0, 5);
+  document.getElementById('kpi-snap').innerHTML = snapKPIs.map(k=>{
+    const r = rag(k.actual, k.target, k.direction);
     return `<div class="snap-row">
-      <div class="snap-name">${name}</div>
+      <div class="snap-name">${k.name}</div>
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="snap-target">${fmtT(target,unit)}</span>
+        <span class="snap-target">${fmtT(k.target,k.unit)}</span>
         ${ragBadge(r)}
       </div>
     </div>`;
@@ -1852,45 +1830,66 @@ function search(q) { curSearch=q; renderTasks(); }
 // ═══════════════════════════════════════════════
 //  KPIs
 // ═══════════════════════════════════════════════
+const KPI_CATEGORIES = ['Crecimiento','Revenue','Retención','Unit Econ.','Marketing','Satisfacción','Otro'];
+
 function renderKPIs() {
-  const secs = [...new Set(KPI_DATA.map(k=>k[0]))];
+  const secs = [...new Set(KPI_LIST.map(k=>k.category))];
   let html = `<table class="kpi-table">
     <thead><tr>
-      <th style="width:33%">métrica</th><th style="width:10%">target</th><th style="width:13%">real</th>
-      <th style="width:12%">Δ vs target</th><th style="width:9%">Δ %</th><th>estado</th>
+      <th style="width:22%">métrica</th><th style="width:9%">categoría</th><th style="width:8%">target</th>
+      <th style="width:6%">unidad</th><th style="width:5%">dir</th>
+      <th style="width:11%">real</th><th style="width:10%">Δ vs target</th>
+      <th style="width:7%">Δ %</th><th style="width:8%">estado</th><th style="width:32px"></th>
     </tr></thead><tbody>`;
 
   secs.forEach(sec=>{
-    html+=`<tr><td colspan="6" style="padding:0;border:none"><div class="kpi-section-label">${sec}</div></td></tr>`;
-    KPI_DATA.forEach(([s,name,target,unit,dir],i)=>{
-      if (s!==sec) return;
-      const a = actuals[i];
-      const r = rag(a,target,dir);
-      const av = a!==null&&a!=='' ? parseFloat(a) : null;
-      const dv = av!==null ? av-target : null;
-      const dp = av!==null&&target ? dv/target*100 : null;
+    html+=`<tr><td colspan="10" style="padding:0;border:none"><div class="kpi-section-label">${sec}</div></td></tr>`;
+    KPI_LIST.forEach((k,i)=>{
+      if (k.category!==sec) return;
+      const a = k.actual;
+      const r = rag(a, k.target, k.direction);
+      const av = a!==null&&a!==undefined ? parseFloat(a) : null;
+      const dv = av!==null ? av-k.target : null;
+      const dp = av!==null&&k.target ? dv/k.target*100 : null;
       const fmtDelta = ()=>{
         if (dv===null) return '<span class="delta-neu">—</span>';
-        const pos = dir==="high"?dv>=0:dv<=0;
+        const pos = k.direction==="high"?dv>=0:dv<=0;
         const cls = pos?'delta-pos':'delta-neg';
         const sign = dv>=0?'+':'';
-        if (unit==="$") return `<span class="${cls}">${sign}$${Math.abs(dv).toLocaleString(undefined,{maximumFractionDigits:0})}</span>`;
-        if (unit==="%") return `<span class="${cls}">${sign}${(dv*100).toFixed(1)}pp</span>`;
+        if (k.unit==="$") return `<span class="${cls}">${sign}$${Math.abs(dv).toLocaleString(undefined,{maximumFractionDigits:0})}</span>`;
+        if (k.unit==="%") return `<span class="${cls}">${sign}${(dv*100).toFixed(1)}pp</span>`;
         return `<span class="${cls}">${sign}${dv.toFixed(1)}</span>`;
       };
       const fmtPct = ()=>{
         if (dp===null) return '<span class="delta-neu">—</span>';
-        const pos = dir==="high"?dp>=0:dp<=0;
+        const pos = k.direction==="high"?dp>=0:dp<=0;
         const cls = pos?'delta-pos':'delta-neg';
         return `<span class="${cls}">${dp>=0?'+':''}${dp.toFixed(0)}%</span>`;
       };
       html+=`<tr>
-        <td><span class="kpi-metric-name">${name}</span></td>
-        <td><span class="kpi-target">${fmtT(target,unit)}</span></td>
+        <td><input class="form-input" style="font-size:12px;padding:5px 8px;font-weight:500;color:var(--navy)" value="${k.name}" onchange="updateKPI(${i},'name',this.value)"/></td>
+        <td><select class="status-sel" style="font-size:10px" onchange="updateKPI(${i},'category',this.value)">
+          ${KPI_CATEGORIES.map(c=>`<option ${c===k.category?'selected':''}>${c}</option>`).join('')}
+        </select></td>
+        <td><input class="actual-input" style="width:80px;background:var(--off-white);border-color:var(--border)" type="number" value="${k.target}" step="${k.unit==='%'?'0.01':'1'}" onchange="updateKPI(${i},'target',this.value)"/></td>
+        <td><select class="status-sel" style="font-size:10px" onchange="updateKPI(${i},'unit',this.value)">
+          ${['#','$','%','x'].map(u=>`<option ${u===k.unit?'selected':''}>${u}</option>`).join('')}
+        </select></td>
+        <td><select class="status-sel" style="font-size:10px" onchange="updateKPI(${i},'direction',this.value)">
+          <option value="high" ${k.direction==='high'?'selected':''}>↑</option>
+          <option value="low" ${k.direction==='low'?'selected':''}>↓</option>
+        </select></td>
         <td><input class="actual-input" type="number" placeholder="Ingresar"
-          value="${a!==null?a:''}" step="${unit==='%'?'0.01':'1'}"
+          value="${a!==null&&a!==undefined?a:''}" step="${k.unit==='%'?'0.01':'1'}"
           onchange="setActual(${i},this.value)"/></td>
         <td>${fmtDelta()}</td><td>${fmtPct()}</td><td>${ragBadge(r)}</td>
+        <td style="text-align:center">
+          <button onclick="deleteKPI(${i})" title="Borrar KPI" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:4px;color:var(--warm-gray);display:flex;align-items:center;justify-content:center" onmouseover="this.style.color='#9B2335'" onmouseout="this.style.color='var(--warm-gray)'">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <polyline points="1,3.5 13,3.5"/><path d="M5.5,3.5V2.5a1,1,0,0,1,1-1h1a1,1,0,0,1,1,1v1"/><path d="M2.5,3.5l.8,8.2a1,1,0,0,0,1,.8h5.4a1,1,0,0,0,1-.8l.8-8.2"/>
+            </svg>
+          </button>
+        </td>
       </tr>`;
     });
   });
@@ -1898,10 +1897,40 @@ function renderKPIs() {
   document.getElementById('kpi-table-wrap').innerHTML=html;
 }
 
-async function setActual(i,v) {
-  actuals[i]=v===''?null:v;
-  const actual = v==='' ? null : parseFloat(v);
-  await sb.from('kpi_actuals').upsert({ kpi_index: i, actual, updated_at: new Date().toISOString() }, { onConflict: 'kpi_index' });
+async function updateKPI(i, field, val) {
+  const k = KPI_LIST[i];
+  if (field === 'target') { k.target = parseFloat(val); val = k.target; }
+  else { k[field] = val; }
+  await sb.from('kpis').update({ [field]: val }).eq('id', k.id);
+  renderKPIs();
+  if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+}
+
+async function setActual(i, v) {
+  const k = KPI_LIST[i];
+  k.actual = v === '' ? null : parseFloat(v);
+  await sb.from('kpis').update({ actual: k.actual }).eq('id', k.id);
+  renderKPIs();
+  if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
+}
+
+async function addKPI() {
+  const name = prompt("Nombre del KPI:");
+  if (!name) return;
+  const maxOrder = KPI_LIST.length > 0 ? Math.max(...KPI_LIST.map(k=>k.id)) + 1 : 1;
+  const { data, error } = await sb.from('kpis').insert({
+    category: 'Otro', name, target: 0, unit: '#', direction: 'high', sort_order: maxOrder
+  }).select().single();
+  if (error || !data) { alert('Error al crear KPI'); return; }
+  KPI_LIST.push({ id: data.id, category: 'Otro', name, target: 0, unit: '#', direction: 'high', actual: null });
+  renderKPIs();
+}
+
+async function deleteKPI(i) {
+  const k = KPI_LIST[i];
+  if (!confirm(`¿Borrar "${k.name}"?`)) return;
+  await sb.from('kpis').delete().eq('id', k.id);
+  KPI_LIST.splice(i, 1);
   renderKPIs();
   if (document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
 }
