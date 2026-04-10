@@ -1123,6 +1123,10 @@ body {
       </div>
       <div class="filter-bar">
         <button class="chip active" onclick="filter('all',this)">Todas</button>
+        <button class="chip" onclick="filter('MINE',this)">Mis Tareas</button>
+        <button class="chip" onclick="filter('TODAY',this)">Hoy</button>
+        <button class="chip" onclick="filter('WEEK',this)">Esta Semana</button>
+        <button class="chip" onclick="filter('OVERDUE',this)">Vencidas</button>
         <button class="chip" onclick="filter('Not Started',this)">Pendientes</button>
         <button class="chip" onclick="filter('In Progress',this)">En Progreso</button>
         <button class="chip" onclick="filter('Done',this)">Completadas</button>
@@ -1698,14 +1702,31 @@ function renderDashboard() {
 // ═══════════════════════════════════════════════
 //  TASKS
 // ═══════════════════════════════════════════════
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function endOfWeekISO() {
+  const d = new Date();
+  const dayOfWeek = d.getDay(); // 0=Sun
+  const daysUntilSun = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  d.setDate(d.getDate() + daysUntilSun);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function taskVisible(i) {
   const s = statuses[i];
-  const [area,task,,,priority,notes] = TASKS[i];
+  const [area,task,due,,priority,notes,ownerEmail] = TASKS[i];
   const q = curSearch.toLowerCase();
   const matchQ = !q || task.toLowerCase().includes(q) || (notes||'').toLowerCase().includes(q) || area.toLowerCase().includes(q);
   if (!matchQ) return false;
   if (curFilter==='all') return true;
   if (curFilter==='HIGH') return priority.includes('High');
+  if (curFilter==='MINE') return currentUser && ownerEmail && ownerEmail.toLowerCase() === currentUser.email.toLowerCase();
+  if (curFilter==='TODAY') return due === todayISO();
+  if (curFilter==='WEEK') return due && due >= todayISO() && due <= endOfWeekISO();
+  if (curFilter==='OVERDUE') return due && due < todayISO() && !s.includes('Done');
   return s===curFilter;
 }
 
