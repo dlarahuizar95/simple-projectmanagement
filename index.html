@@ -1290,34 +1290,52 @@ function initials(name) {
   return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 }
 
-async function doLogin() {
-  const email = document.getElementById('l-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('l-pass').value;
-  // Fetch user from Supabase
-  const { data } = await sb.from('users').select('*').eq('email', email).eq('password', pass).single();
-  if (!data) {
-    document.getElementById('l-error').classList.add('show');
-    return;
-  }
-  currentUser = { name: data.name, email: data.email, password: data.password, role: data.role };
+async function enterApp(user) {
+  currentUser = user;
+  localStorage.setItem('simple_session', JSON.stringify({ email: user.email }));
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('sb-avatar').textContent = initials(currentUser.name);
-  document.getElementById('sb-name').textContent   = currentUser.name;
-  document.getElementById('sb-role').textContent   = currentUser.role==='admin' ? 'Admin' : 'Member';
-  if (currentUser.role==='admin') document.getElementById('admin-nav').style.display='block';
-  // Load all data
+  document.getElementById('sb-avatar').textContent = initials(user.name);
+  document.getElementById('sb-name').textContent   = user.name;
+  document.getElementById('sb-role').textContent   = user.role==='admin' ? 'Admin' : 'Member';
+  if (user.role==='admin') document.getElementById('admin-nav').style.display='block';
   await Promise.all([loadUsers(), loadTasks(), loadKPIActuals()]);
   updateSidebar();
   renderDashboard();
 }
 
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('l-pass').value;
+  const { data } = await sb.from('users').select('*').eq('email', email).eq('password', pass).single();
+  if (!data) {
+    document.getElementById('l-error').classList.add('show');
+    return;
+  }
+  await enterApp({ name: data.name, email: data.email, password: data.password, role: data.role });
+}
+
 function doLogout() {
   currentUser = null;
+  localStorage.removeItem('simple_session');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('l-email').value = '';
   document.getElementById('l-pass').value  = '';
   document.getElementById('l-error').classList.remove('show');
   document.getElementById('admin-nav').style.display = 'none';
+}
+
+async function tryAutoLogin() {
+  const saved = localStorage.getItem('simple_session');
+  if (!saved) return;
+  try {
+    const { email } = JSON.parse(saved);
+    const { data } = await sb.from('users').select('*').eq('email', email).single();
+    if (data) {
+      await enterApp({ name: data.name, email: data.email, password: data.password, role: data.role });
+    }
+  } catch(e) {
+    localStorage.removeItem('simple_session');
+  }
 }
 
 async function createUser() {
@@ -1890,9 +1908,9 @@ async function addTask() {
 }
 
 // ═══════════════════════════════════════════════
-//  INIT
+//  INIT — auto-login if session exists
 // ═══════════════════════════════════════════════
-// App starts at login screen — data loads after login
+tryAutoLogin();
 </script>
 </body>
 </html>
